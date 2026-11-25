@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PaperUploader from '../components/PaperUploader.jsx';
 import { deletePaper, listPapers } from '../services/paperApi.js';
+import { listHistory } from '../services/historyApi.js';
+import { formatHHMMSS } from '../services/timeFormat.js';
 import {
   GENERATION_PROMPT,
   copyPromptToClipboard,
@@ -13,6 +15,8 @@ export default function Home() {
   const [papers, setPapers] = useState([]);
   const [loadingPapers, setLoadingPapers] = useState(true);
   const [papersError, setPapersError] = useState(null);
+  const [pastAttempts, setPastAttempts] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [toast, setToast] = useState(null);
   const [showPromptPreview, setShowPromptPreview] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -30,8 +34,21 @@ export default function Home() {
     }
   }
 
+  async function refreshPastTests() {
+    setLoadingHistory(true);
+    try {
+      const data = await listHistory();
+      setPastAttempts(data.attempts || []);
+    } catch {
+      setPastAttempts([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
   useEffect(() => {
     refreshPapers();
+    refreshPastTests();
   }, []);
 
   async function handleCopyPrompt() {
@@ -240,6 +257,75 @@ export default function Home() {
                       >
                         Delete
                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <section className="panel" aria-label="Past Tests panel">
+          <div className="panel-header-row">
+            <h2>Recent Past Tests</h2>
+            <button type="button" className="btn btn-secondary" onClick={() => navigate('/history')}>
+              Open Past Tests & Analytics
+            </button>
+          </div>
+
+          {loadingHistory ? (
+            <p className="muted-text">Loading past tests...</p>
+          ) : pastAttempts.length === 0 ? (
+            <div className="empty-state">
+              <p>No past mock test attempts recorded yet.</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Score /100</th>
+                  <th>Duration</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pastAttempts.slice(0, 5).map((item) => (
+                  <tr key={item.attemptId}>
+                    <td>{item.paperTitle}</td>
+                    <td>{item.date ? new Date(item.date).toLocaleDateString() : '—'}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{item.status}</td>
+                    <td>{item.total !== null && item.total !== undefined ? `${item.total} / 100` : '—'}</td>
+                    <td>{formatHHMMSS(Math.round((item.durationMs || 0) / 1000))}</td>
+                    <td className="table-actions">
+                      {item.hasResult ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={() => navigate(`/results/${item.attemptId}`)}
+                          >
+                            View Result
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => navigate(`/results/${item.attemptId}?tab=review`)}
+                          >
+                            Review Answers
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => navigate('/history')}
+                        >
+                          Manage
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

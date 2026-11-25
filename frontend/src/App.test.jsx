@@ -10,6 +10,10 @@ describe('frontend routes', () => {
       headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         papers: [],
+        attempts: [],
+        totalAttempts: 0,
+        topics: [],
+        recommendations: [],
         paper: { id: 'p1', paperId: 'paper-1', title: 'Mock' },
         attemptId: 'attempt-1',
         paperTitle: 'Mock Paper',

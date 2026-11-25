@@ -12,12 +12,14 @@ import { createExamEngine } from './services/examEngine.js';
 import { createJudgeService } from './services/judgeService.js';
 import { createEvaluationService } from './services/evaluationService.js';
 import { createResultService } from './services/resultService.js';
+import { createHistoryService } from './services/historyService.js';
 import healthRoutes from './routes/healthRoutes.js';
 import compilerRoutes from './routes/compilerRoutes.js';
 import { createSettingsRoutes } from './routes/settingsRoutes.js';
 import { createPaperRoutes } from './routes/paperRoutes.js';
 import { createExamRoutes } from './routes/examRoutes.js';
 import { createResultRoutes } from './routes/resultRoutes.js';
+import { createHistoryRoutes } from './routes/historyRoutes.js';
 import { cleanupStaleSandbox } from './compiler/dockerRunner.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
@@ -59,6 +61,7 @@ export function createApp({
 
   evaluationService = createEvaluationService({ repos, examEngine, nowFn });
   const resultService = createResultService({ repos, examEngine, evaluationService });
+  const historyService = createHistoryService({ repos, resultService, nowFn });
 
   const judgeService = createJudgeService({
     repos,
@@ -76,6 +79,7 @@ export function createApp({
   app.locals.judgeService = judgeService;
   app.locals.evaluationService = evaluationService;
   app.locals.resultService = resultService;
+  app.locals.historyService = historyService;
 
   app.use(helmet());
   app.use(
@@ -111,6 +115,7 @@ export function createApp({
   );
   app.use('/api', createExamRoutes({ examEngine, judgeService }));
   app.use('/api', createResultRoutes({ resultService }));
+  app.use('/api', createHistoryRoutes({ historyService }));
 
   if (typeof registerExtraRoutes === 'function') {
     registerExtraRoutes(app);

@@ -429,7 +429,9 @@ export function createResultsRepo(db) {
   `);
   const getByAttemptStmt = db.prepare('SELECT * FROM results WHERE attempt_id = ?');
   const listWithAttemptsStmt = db.prepare(`
-    SELECT r.*, a.paper_id, a.status, a.started_at, a.ended_at, a.violation_limit, a.termination_reason,
+    SELECT a.id AS id, a.id AS attempt_id, r.total, r.section1, r.section2, r.section2a,
+           r.breakdown_json, r.computed_at,
+           a.paper_id, a.status, a.started_at, a.ended_at, a.violation_limit, a.termination_reason,
            p.title AS paper_title, p.paper_id AS external_paper_id
     FROM attempts a
     LEFT JOIN results r ON r.attempt_id = a.id
