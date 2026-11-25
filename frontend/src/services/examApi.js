@@ -39,3 +39,19 @@ export function submitSection(attemptId) {
     body: JSON.stringify({}),
   });
 }
+
+export function reportViolation(attemptId, { type, section = null, questionId = null }) {
+  return apiRequest(`/attempts/${encodeURIComponent(attemptId)}/violation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, section, questionId }),
+  });
+}
+
+export function terminateAttempt(attemptId, reason) {
+  return apiRequest(`/attempts/${encodeURIComponent(attemptId)}/terminate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+}

@@ -252,10 +252,13 @@ export function createExamEngine({
       throw new AppError(404, 'NOT_FOUND', `Paper "${paperId}" not found.`);
     }
 
+    const savedLimit = Number.parseInt(repos.settingsRepo.get('violation_limit') || '', 10);
+    const defaultLimit = savedLimit === 3 || savedLimit === 5 ? savedLimit : config.violationLimit;
+
     const attempt = repos.attemptsRepo.create({
       paper_id: paper.id,
       status: 'not_started',
-      violation_limit: violationLimit ?? config.violationLimit,
+      violation_limit: violationLimit ?? defaultLimit,
       current_section: null,
       current_index: 0,
     });
@@ -816,6 +819,95 @@ export function createExamEngine({
     return updated;
   }
 
+  const recordViolationTx = db.transaction(({ attemptId, type, section, questionId, now }) => {
+    const attempt = repos.attemptsRepo.getById(attemptId);
+    if (!attempt) {
+      throw new AppError(404, 'NOT_FOUND', `Attempt "${attemptId}" not found.`);
+    }
+    if (attempt.status === 'terminated') {
+      throw new AppError(403, 'ATTEMPT_TERMINATED', 'Attempt has already been terminated.');
+    }
+    if (attempt.status === 'completed' || attempt.status === 'abandoned') {
+      const count = repos.violationsRepo.countForAttempt(attemptId);
+      return {
+        deduplicated: false,
+        ignored: true,
+        count,
+        limit: attempt.violation_limit,
+        remaining: Math.max(0, attempt.violation_limit - count),
+        terminated: false,
+      };
+    }
+
+    const latest = repos.violationsRepo.getLatestByType(attemptId, type);
+    if (latest && now - latest.at < 1000) {
+      const count = repos.violationsRepo.countForAttempt(attemptId);
+      return {
+        deduplicated: true,
+        count,
+        limit: attempt.violation_limit,
+        remaining: Math.max(0, attempt.violation_limit - count),
+        terminated: false,
+      };
+    }
+
+    const activeSection = section || attempt.current_section || null;
+    repos.violationsRepo.record({
+      attempt_id: attemptId,
+      type,
+      at: now,
+      section: activeSection,
+      question_id: questionId ?? null,
+    });
+
+    const count = repos.violationsRepo.countForAttempt(attemptId);
+    const limit = attempt.violation_limit;
+
+    if (count > limit) {
+      const reason = `Exceeded violation limit (${count} of ${limit} allowed; last event: ${type})`;
+      repos.sectionStateRepo.lockRemainingSections(attemptId, 'expired');
+      repos.attemptsRepo.updateState(attemptId, {
+        status: 'terminated',
+        ended_at: now,
+        termination_reason: reason,
+        current_section: null,
+        current_index: 0,
+      });
+      return {
+        deduplicated: false,
+        count,
+        limit,
+        remaining: 0,
+        terminated: true,
+        terminationReason: reason,
+      };
+    }
+
+    return {
+      deduplicated: false,
+      count,
+      limit,
+      remaining: Math.max(0, limit - count),
+      terminated: false,
+    };
+  });
+
+  function recordViolation(attemptId, { type, section = null, questionId = null }) {
+    reconcileAttempt(attemptId);
+    const now = nowFn();
+    const outcome = recordViolationTx({
+      attemptId,
+      type,
+      section,
+      questionId,
+      now,
+    });
+    if (outcome.terminated) {
+      triggerCompletionHook(attemptId);
+    }
+    return outcome;
+  }
+
   return {
     createAttempt,
     getState,
@@ -825,6 +917,7 @@ export function createExamEngine({
     nextQuestion,
     submitSection,
     terminateAttempt,
+    recordViolation,
     reconcileAttempt,
     reconcileAllOpenAttempts,
     loadDecryptedPaper,

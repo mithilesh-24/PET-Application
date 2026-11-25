@@ -18,6 +18,8 @@ describe('frontend routes', () => {
         nextSection: 'S1',
         violationCount: 0,
         violationLimit: 3,
+        tools: [],
+        dockerReady: false,
       }),
     });
   });
@@ -26,7 +28,7 @@ describe('frontend routes', () => {
     ['/', 'PET PREP'],
     ['/upload', 'Upload Question Paper'],
     ['/instructions/paper-1', 'Examination Instructions'],
-    ['/exam/attempt-1', 'Ready to begin Section 1 — Common to All'],
+    ['/exam/attempt-1', 'Start-of-Examination Gate'],
     ['/results/attempt-1', 'Exam Results'],
     ['/history', 'Past Tests'],
     ['/settings', 'Settings'],

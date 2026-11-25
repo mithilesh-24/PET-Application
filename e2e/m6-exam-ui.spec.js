@@ -3,6 +3,7 @@ import { createValidFullPaper } from '../backend/tests/fixtures/paperFixtures.js
 
 test('M6 exam UI walkthrough across 3 questions, disabled Previous, display-only numbers, refresh recovery, and viewport screenshots', async ({
   page,
+  context,
   request,
 }) => {
   const uniqueId = `PET-E2E-${Date.now()}`;
@@ -33,7 +34,8 @@ test('M6 exam UI walkthrough across 3 questions, disabled Previous, display-only
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto(`/exam/${attempt.id}`);
 
-    await page.getByRole('button', { name: 'Start Section 1' }).click();
+    await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: 'Enter Fullscreen & Start Section 1' }).click();
     await expect(page.getByText('Question 1 of 40')).toBeVisible();
 
     const prevBtn = page.getByRole('button', { name: 'Previous' });
@@ -59,8 +61,9 @@ test('M6 exam UI walkthrough across 3 questions, disabled Previous, display-only
     await page.getByRole('button', { name: 'Save and Next' }).click();
     await expect(page.getByText('Question 3 of 40')).toBeVisible();
 
-    // Refresh mid-question returns to Question 3 with server timer intact
+    // Refresh mid-question -> re-enter fullscreen gate -> returns to Question 3 with server timer intact
     await page.reload();
+    await page.getByRole('button', { name: 'Return to Fullscreen' }).click();
     await expect(page.getByText('Question 3 of 40')).toBeVisible();
     await expect(page.getByTestId('exam-timer')).toBeVisible();
 
@@ -71,13 +74,18 @@ test('M6 exam UI walkthrough across 3 questions, disabled Previous, display-only
     expect(overflow1366).toBe(false);
     await page.screenshot({ path: 'test-results/m6-1366x768.png' });
 
-    // Check layout at 1920x1080 and capture screenshot
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    const overflow1920 = await page.evaluate(
+    // Check layout at 1920x1080 on a fresh page (Chromium cannot resize an active fullscreen page)
+    const page1920 = await context.newPage();
+    await page1920.setViewportSize({ width: 1920, height: 1080 });
+    await page1920.goto(`/exam/${attempt.id}`);
+    await page1920.getByRole('button', { name: 'Return to Fullscreen' }).click();
+    await expect(page1920.getByText('Question 3 of 40')).toBeVisible();
+    const overflow1920 = await page1920.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth
     );
     expect(overflow1920).toBe(false);
-    await page.screenshot({ path: 'test-results/m6-1920x1080.png' });
+    await page1920.screenshot({ path: 'test-results/m6-1920x1080.png' });
+    await page1920.close();
   } finally {
     await request.delete(`http://localhost:4000/api/papers/${createdPaper.id}`).catch(() => {});
   }

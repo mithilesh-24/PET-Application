@@ -26,3 +26,8 @@ npm run dev
 - **Encrypted Question Papers at Rest**: Imported papers are gzipped and encrypted with AES-256-GCM (`PET1` package format with unique 96-bit nonces and authenticated headers). Keys are stored in the OS keychain when available, or in `~/.pet-prep/keys/` (outside the repository and `DATA_DIR`) with `0600` permissions.
 - **What this protects against**: Casual inspection of stored `.pet` files, accidental plaintext leaks, and file tampering (detected by GCM authentication tags).
 - **What this does not protect against**: A user with administrator/root privileges on the same machine who can read the local keychain, key files, or process memory.
+
+## Proctoring and Browser-Monitoring Limitations
+
+- During an active exam, PET Prep records browser-visible events (`tab_hidden`, `fullscreen_exit`, `window_blur`, and blocked `copy_paste` on question text) up to the configured attempt violation limit (3 or 5).
+- **Honest scope**: This cannot stop OS-level application switching, a second device, physical notes, screenshots, virtual machines, or someone helping the student. It only records browser-visible events inside the exam window.

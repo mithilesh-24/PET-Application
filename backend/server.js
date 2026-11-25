@@ -11,6 +11,7 @@ import { verifyCodingTests } from './services/codingVerifier.js';
 import { createExamEngine } from './services/examEngine.js';
 import healthRoutes from './routes/healthRoutes.js';
 import compilerRoutes from './routes/compilerRoutes.js';
+import { createSettingsRoutes } from './routes/settingsRoutes.js';
 import { createPaperRoutes } from './routes/paperRoutes.js';
 import { createExamRoutes } from './routes/examRoutes.js';
 import { cleanupStaleSandbox } from './compiler/dockerRunner.js';
@@ -74,6 +75,7 @@ export function createApp({
 
   app.use('/api', healthRoutes);
   app.use('/api', compilerRoutes);
+  app.use('/api', createSettingsRoutes({ settingsRepo: repos.settingsRepo }));
   app.use(
     '/api',
     createPaperRoutes({

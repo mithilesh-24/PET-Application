@@ -25,6 +25,18 @@ const nextQuestionSchema = z
   })
   .optional();
 
+const violationSchema = z.object({
+  type: z.enum(['tab_hidden', 'fullscreen_exit', 'window_blur', 'devtools', 'copy_paste']),
+  section: z.enum(['S1', 'S2', 'S2A']).nullable().optional(),
+  questionId: z.string().nullable().optional(),
+});
+
+const terminateSchema = z
+  .object({
+    reason: z.string().min(1).max(300).optional(),
+  })
+  .optional();
+
 export function createExamRoutes({ examEngine }) {
   const router = Router();
 
@@ -90,6 +102,27 @@ export function createExamRoutes({ examEngine }) {
     try {
       const result = await examEngine.submitSection(req.params.id);
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/attempts/:id/violation', (req, res, next) => {
+    try {
+      const parsed = violationSchema.parse(req.body);
+      const outcome = examEngine.recordViolation(req.params.id, parsed);
+      res.json(outcome);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/attempts/:id/terminate', async (req, res, next) => {
+    try {
+      const parsed = terminateSchema.parse(req.body);
+      examEngine.terminateAttempt(req.params.id, parsed?.reason || 'Terminated by client');
+      const state = await examEngine.getState(req.params.id);
+      res.json({ terminated: true, state });
     } catch (err) {
       next(err);
     }

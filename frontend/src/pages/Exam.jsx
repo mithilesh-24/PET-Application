@@ -12,10 +12,12 @@ import {
   getCurrentQuestion,
   getExamState,
   nextQuestion,
+  reportViolation,
   saveAnswer,
   startSection,
   submitSection,
 } from '../services/examApi.js';
+import { useExamMonitor } from '../services/useExamMonitor.js';
 
 const SECTION_TITLES = {
   S1: 'Section 1 - Common to All',
@@ -42,16 +44,27 @@ export default function Exam() {
   const [busy, setBusy] = useState(false);
   const [confirmUnanswered, setConfirmUnanswered] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [gateChecked, setGateChecked] = useState(false);
+  const [gateError, setGateError] = useState(null);
+  const [warningDialog, setWarningDialog] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(() =>
     typeof document !== 'undefined' ? Boolean(document.fullscreenElement) : false
   );
+  const [monitorArmed, setMonitorArmed] = useState(false);
 
   const questionHeadingRef = useRef(null);
   const questionLoadedAtRef = useRef(Date.now());
   const accumulatedMsRef = useRef(0);
+  const exitingLegitimatelyRef = useRef(false);
 
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const onFsChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      if (active) {
+        setMonitorArmed(true);
+      }
+    };
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
@@ -61,6 +74,17 @@ export default function Exam() {
     try {
       const state = await getExamState(attemptId);
       setExamState(state);
+
+      if (state.phase === 'completed' || state.phase === 'terminated') {
+        exitingLegitimatelyRef.current = true;
+        setMonitorArmed(false);
+        setWarningDialog(null);
+        setQuestionData(null);
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        return;
+      }
 
       if (state.phase === 'in_section') {
         const q = await getCurrentQuestion(attemptId);
@@ -84,13 +108,106 @@ export default function Exam() {
   }, [loadStateAndQuestion]);
 
   useEffect(() => {
-    if (questionData?.question?.id && questionHeadingRef.current) {
+    if (isFullscreen && questionData?.question?.id && questionHeadingRef.current) {
       questionHeadingRef.current.focus();
     }
-  }, [questionData?.question?.id]);
+  }, [isFullscreen, questionData?.question?.id]);
+
+  const handleViolationDetected = useCallback(
+    async ({ type, section, questionId }) => {
+      if (exitingLegitimatelyRef.current) return;
+      try {
+        const outcome = await reportViolation(attemptId, { type, section, questionId });
+        if (outcome.terminated) {
+          exitingLegitimatelyRef.current = true;
+          setMonitorArmed(false);
+          setWarningDialog(null);
+          await loadStateAndQuestion();
+          return;
+        }
+        setExamState((prev) =>
+          prev
+            ? {
+                ...prev,
+                violationCount: outcome.count,
+                violationLimit: outcome.limit,
+              }
+            : prev
+        );
+        if (!outcome.ignored) {
+          setWarningDialog({
+            type,
+            count: outcome.count,
+            limit: outcome.limit,
+            remaining: outcome.remaining,
+          });
+        }
+      } catch (err) {
+        if (err.code === 'ATTEMPT_TERMINATED') {
+          exitingLegitimatelyRef.current = true;
+          setMonitorArmed(false);
+          setWarningDialog(null);
+          await loadStateAndQuestion();
+        }
+      }
+    },
+    [attemptId, loadStateAndQuestion]
+  );
+
+  const isRunningExamPhase = examState?.phase === 'in_section' || examState?.phase === 'transition';
+
+  useExamMonitor({
+    enabled: Boolean(isRunningExamPhase && monitorArmed),
+    section: examState?.currentSection || null,
+    questionId: questionData?.question?.id || null,
+    isInternalDialogOpen: Boolean(confirmUnanswered || confirmSubmit || warningDialog),
+    exitingLegitimatelyRef,
+    onReportViolation: handleViolationDetected,
+  });
 
   function getElapsedTimeMs() {
     return accumulatedMsRef.current + Math.max(0, Date.now() - questionLoadedAtRef.current);
+  }
+
+  async function requestFullscreenAndArm() {
+    setGateError(null);
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      setMonitorArmed(true);
+      return Boolean(document.fullscreenElement);
+    } catch {
+      setGateError('Fullscreen permission was denied. Please allow fullscreen to proceed.');
+      return false;
+    }
+  }
+
+  async function handleStartGateSubmit() {
+    if (!gateChecked || busy) return;
+    setBusy(true);
+    setGateError(null);
+    const fsActive = await requestFullscreenAndArm();
+    if (!fsActive) {
+      setBusy(false);
+      return;
+    }
+    try {
+      await startSection(attemptId, 'S1');
+      await loadStateAndQuestion();
+    } catch (err) {
+      setError(err.message || 'Could not start exam.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReturnToFullscreen() {
+    const fsActive = await requestFullscreenAndArm();
+    if (fsActive) {
+      setWarningDialog(null);
+    }
   }
 
   const handleSelectOption = useCallback(
@@ -193,7 +310,13 @@ export default function Exam() {
   }, [busy, proceedToNext, questionData, selectedIndex]);
 
   useEffect(() => {
-    if (examState?.phase !== 'in_section' || confirmUnanswered || confirmSubmit) {
+    if (
+      !isFullscreen ||
+      examState?.phase !== 'in_section' ||
+      confirmUnanswered ||
+      confirmSubmit ||
+      warningDialog
+    ) {
       return undefined;
     }
     const handleEnter = (e) => {
@@ -205,7 +328,14 @@ export default function Exam() {
     };
     window.addEventListener('keydown', handleEnter);
     return () => window.removeEventListener('keydown', handleEnter);
-  }, [examState?.phase, confirmUnanswered, confirmSubmit, handleSaveAndNextClick]);
+  }, [
+    isFullscreen,
+    examState?.phase,
+    confirmUnanswered,
+    confirmSubmit,
+    warningDialog,
+    handleSaveAndNextClick,
+  ]);
 
   async function handleConfirmSubmitSection() {
     if (busy) return;
@@ -224,8 +354,11 @@ export default function Exam() {
           timeSpentMs: getElapsedTimeMs(),
         });
       }
-      await submitSection(attemptId);
+      const res = await submitSection(attemptId);
       setConfirmSubmit(false);
+      if (res.completed) {
+        exitingLegitimatelyRef.current = true;
+      }
       await loadStateAndQuestion();
     } catch (err) {
       setError(err.message || 'Could not submit section.');
@@ -246,6 +379,15 @@ export default function Exam() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleNavigateToResults() {
+    exitingLegitimatelyRef.current = true;
+    setMonitorArmed(false);
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    navigate(`/results/${encodeURIComponent(attemptId)}`);
   }
 
   if (loading) {
@@ -286,14 +428,14 @@ export default function Exam() {
               Reason: {examState.terminationReason}
             </div>
           )}
-          <p>Your submitted responses have been recorded on the server. View your results below.</p>
+          <p>
+            {examState.phase === 'terminated'
+              ? 'This attempt was locked due to exceeding the browser violation limit. Any sections or responses submitted before termination have been preserved.'
+              : 'Your submitted responses have been recorded on the server. View your results below.'}
+          </p>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => navigate(`/results/${encodeURIComponent(attemptId)}`)}
-            >
-              View Results
+            <button type="button" className="btn btn-primary" onClick={handleNavigateToResults}>
+              View Results &amp; Review
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => navigate('/')}>
               Return Home
@@ -304,7 +446,116 @@ export default function Exam() {
     );
   }
 
-  if (examState?.phase === 'not_started' || examState?.phase === 'transition') {
+  // Start-of-exam fullscreen gate (when attempt has not started yet)
+  if (examState?.phase === 'not_started') {
+    return (
+      <div className="exam-shell">
+        <div className="transition-card">
+          <h1>Start-of-Examination Gate</h1>
+          <p className="muted-text">{examState.paperTitle}</p>
+          <ul className="rules-list">
+            <li>3 sequential sections (50 minutes each): Section 1 → Section 2 → Section 2a.</li>
+            <li>Navigation is strictly forward-only. Previous is disabled throughout the exam.</li>
+            <li>
+              Browser monitoring active: tab switches, fullscreen exits, window focus loss, and
+              question copy/paste attempts are logged. Limit: {examState.violationLimit} warnings.
+            </li>
+            <li>
+              Honest scope: browser checks only detect browser-visible events and cannot prevent
+              OS-level app switching or external devices.
+            </li>
+          </ul>
+
+          <div className="form-row checkbox-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={gateChecked}
+                onChange={(e) => setGateChecked(e.target.checked)}
+              />{' '}
+              I understand the rules and agree to take the examination in fullscreen mode.
+            </label>
+          </div>
+
+          {gateError && (
+            <div className="alert alert-error" role="alert">
+              {gateError}
+            </div>
+          )}
+
+          <div className="uploader-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!gateChecked || busy}
+              onClick={handleStartGateSubmit}
+            >
+              {busy ? 'Starting...' : 'Enter Fullscreen & Start Section 1'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Enforce fullscreen before rendering exam content (e.g. after a browser refresh or exit)
+  if (!isFullscreen) {
+    return (
+      <div className="exam-shell">
+        <div
+          className="transition-card"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fullscreen required"
+        >
+          {warningDialog ? (
+            <>
+              <h1>
+                Warning {warningDialog.count} of {warningDialog.limit}. Return to fullscreen to
+                continue.
+              </h1>
+              <p className="muted-text">
+                Event recorded: <code>{warningDialog.type}</code>. Remaining warnings:{' '}
+                {warningDialog.remaining}. The section timer continues running on the server.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1>Fullscreen Mode Required</h1>
+              <p className="muted-text">
+                The examination workspace cannot render outside fullscreen mode. Click below to
+                re-enter fullscreen.
+              </p>
+            </>
+          )}
+
+          {examState?.deadlineAt && (
+            <div style={{ margin: '12px 0' }}>
+              <span>Section time remaining: </span>
+              <Timer
+                deadlineAt={examState.deadlineAt}
+                serverNow={examState.serverNow}
+                onSync={loadStateAndQuestion}
+                onExpire={loadStateAndQuestion}
+              />
+            </div>
+          )}
+
+          {gateError && (
+            <div className="alert alert-error" role="alert">
+              {gateError}
+            </div>
+          )}
+
+          <button type="button" className="btn btn-primary" onClick={handleReturnToFullscreen}>
+            Return to Fullscreen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (examState?.phase === 'transition') {
     return (
       <div className="exam-shell">
         <header className="exam-topbar">
@@ -314,6 +565,7 @@ export default function Exam() {
           </div>
           <div className="exam-topbar-center">Section Transition</div>
           <div className="exam-topbar-right">
+            <span className="exam-status-pill">Fullscreen: Active</span>
             <span className="exam-status-pill">{examState.status}</span>
           </div>
         </header>
@@ -355,9 +607,7 @@ export default function Exam() {
             onSync={loadStateAndQuestion}
             onExpire={loadStateAndQuestion}
           />
-          <span className="exam-status-pill">
-            {isFullscreen ? 'Fullscreen: Active' : 'Fullscreen: Off'}
-          </span>
+          <span className="exam-status-pill">Fullscreen: Active</span>
           <span className="exam-status-pill">In Progress</span>
         </div>
       </header>
@@ -489,6 +739,47 @@ export default function Exam() {
           )}
         </div>
       </footer>
+
+      {warningDialog && (
+        <div
+          className="exam-dialog-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Violation warning"
+        >
+          <div className="exam-dialog">
+            <h2>
+              Warning {warningDialog.count} of {warningDialog.limit}.{' '}
+              {isFullscreen
+                ? 'Focus loss or restricted action detected.'
+                : 'Return to fullscreen to continue.'}
+            </h2>
+            <p>
+              Event recorded: <code>{warningDialog.type}</code>. Your timer continues running.
+              Remaining warnings before termination: {warningDialog.remaining}.
+            </p>
+            <div className="exam-dialog-actions">
+              {isFullscreen ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setWarningDialog(null)}
+                >
+                  Acknowledge &amp; Continue
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleReturnToFullscreen}
+                >
+                  Return to Fullscreen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmUnanswered && (
         <div
