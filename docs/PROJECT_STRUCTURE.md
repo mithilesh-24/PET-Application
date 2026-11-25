@@ -39,8 +39,7 @@ pet-prep/
 │   │   └── repositories.js               8 domain repositories + results/attempt joins
 │   ├── middleware/
 │   │   ├── errorHandler.js               Contract E JSON formatter (AppError, ZodError, Multer, 404, 500)
-│   │   ├── rateLimit.js                  Sliding-window rate limiter on /api/attempts/:id/code/*
-│   │   └── upload.js                     Unused standalone Multer memory middleware (paperRoutes.js defines paperUpload)
+│   │   └── rateLimit.js                  Sliding-window rate limiter on /api/attempts/:id/code/*
 │   ├── routes/
 │   │   ├── healthRoutes.js               GET /api/health & GET /api/health/diagnostics
 │   │   ├── compilerRoutes.js             GET /api/settings/compilers

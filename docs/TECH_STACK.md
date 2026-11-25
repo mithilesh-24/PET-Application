@@ -22,7 +22,7 @@ All versions below are verified directly against [package.json](package.json), [
 | Zod (`zod`) | `3.25.76` (`^3.24.2`) | Request body/query/param validation | `backend/routes/`, `backend/schemas/` | Strict input validation mapping to `VALIDATION_FAILED` |
 | Helmet (`helmet`) | `8.3.0` (`^8.1.0`) | HTTP security headers and strict CSP (`blob:` Monaco workers) | [server.js](backend/server.js) | Prevents inline script/CDN execution while allowing Vite workers |
 | CORS (`cors`) | `2.8.6` (`^2.8.5`) | Origin restriction (`CORS_ORIGIN`, default `http://localhost:5173`) | [server.js](backend/server.js) | Restricts cross-origin browser requests |
-| Multer (`multer`) | `1.4.5-lts.2` | In-memory multipart `.petdraft`/`.pet` uploads | [paperRoutes.js](backend/routes/paperRoutes.js), [upload.js](backend/middleware/upload.js) | Keeps uploads in memory (`memoryStorage()`) without writing untrusted files to disk |
+| Multer (`multer`) | `1.4.5-lts.2` | In-memory multipart `.petdraft`/`.pet` uploads | [paperRoutes.js](backend/routes/paperRoutes.js) | Keeps uploads in memory (`memoryStorage()`) without writing untrusted files to disk |
 | Morgan (`morgan`) | `1.12.1` (`^1.10.0`) | HTTP request logging in non-test environments | [server.js](backend/server.js) | Minimal console logging during dev/prod runs |
 
 ## Database & Storage

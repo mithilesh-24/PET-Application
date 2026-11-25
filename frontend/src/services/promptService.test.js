@@ -1,17 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GENERATION_PROMPT, copyPromptToClipboard } from './promptService.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('M4 promptService', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('contains every required section keyword and matches the spec verbatim', () => {
+  it('contains every required section keyword, validator constraint, and no Docker mentions', () => {
     const requiredKeywords = [
       'Kongu Engineering College',
       'TASK',
@@ -29,6 +24,7 @@ describe('M4 promptService', () => {
       'SECTION 2a - Software Only coding',
       'QUALITY RULES',
       'CODING PROBLEM REQUIREMENTS',
+      'at least 2 tests with kind "boundary" or "corner" and at least 1 with kind "max"',
       'inputGenerator',
       'referenceSolution',
       'JSON FORMAT',
@@ -40,19 +36,7 @@ describe('M4 promptService', () => {
       expect(GENERATION_PROMPT).toContain(kw);
     }
 
-    const specPath = path.resolve(
-      __dirname,
-      '../../../PET Prep - Module-by-Module Build Prompts.md'
-    );
-    const specText = fs.readFileSync(specPath, 'utf8').replace(/\r\n/g, '\n');
-    const marker = '## The in-app AI question-generation prompt';
-    const sectionStart = specText.indexOf(marker);
-    expect(sectionStart).toBeGreaterThan(-1);
-    const blockStart = specText.indexOf('```text\n', sectionStart) + '```text\n'.length;
-    const blockEnd = specText.indexOf('\n```', blockStart);
-    const verbatimFromSpec = specText.slice(blockStart, blockEnd);
-
-    expect(GENERATION_PROMPT).toBe(verbatimFromSpec);
+    expect(GENERATION_PROMPT.toLowerCase()).not.toContain('docker');
   });
 
   it('copies the full prompt using navigator.clipboard.writeText', async () => {

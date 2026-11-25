@@ -212,7 +212,7 @@ export default function Syllabus() {
           <p>
             Two algorithmic programming problems worth <strong>10 marks each</strong>, solved in{' '}
             <strong>C (gcc)</strong>, <strong>C++ (g++)</strong>, <strong>Java (JDK)</strong>, or{' '}
-            <strong>Python 3</strong> inside the isolated Docker sandbox:
+            <strong>Python 3</strong> inside the isolated OS-native sandbox:
           </p>
           <ul style={{ paddingLeft: 20 }}>
             <li>

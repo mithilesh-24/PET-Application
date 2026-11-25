@@ -49,9 +49,10 @@ export function prepareJavaSource(source) {
   const publicClassMatch = source.match(/\bpublic\s+class\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
   if (publicClassMatch && publicClassMatch[1] !== 'Main') {
     const className = publicClassMatch[1];
+    const escapedClassName = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const updated = source
       .replace(/\bpublic\s+class\s+[A-Za-z_$][A-Za-z0-9_$]*/, 'public class Main')
-      .replace(new RegExp(`\\bnew\\s+${className}\\s*\\(`, 'g'), 'new Main(');
+      .replace(new RegExp(`\\bnew\\s+${escapedClassName}\\s*\\(`, 'g'), 'new Main(');
     return {
       source: updated,
       sourceFile: 'Main.java',

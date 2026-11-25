@@ -162,8 +162,9 @@ export default function Home() {
               <code>.pet</code> for packages exported from this app
             </p>
             <p className="local-privacy-note">
-              All exam data, encryption keys, SQLite history, and Docker code execution stay
-              strictly on this computer. No external AI or compiler API is called by PET Prep.
+              All exam data, encryption keys, SQLite history, and OS-native sandboxed code
+              execution stay strictly on this computer. No external AI or compiler API is called by
+              PET Prep.
             </p>
           </div>
 

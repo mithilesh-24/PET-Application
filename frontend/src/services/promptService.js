@@ -35,7 +35,7 @@ QUALITY RULES
 CODING PROBLEM REQUIREMENTS (each of the 2 problems)
   - title, statement (story plus precise task), inputFormat, outputFormat, constraints (with exact ranges), timeLimitMs (1000 to 3000), memoryLimitMb (256).
   - At least 2 samples, each with input, output and a short explanation that walks through the output.
-  - At least 10 hidden tests. Cover: small cases, general cases, boundary values, the maximum-size shape, a single node or element, disconnected graph or forest where relevant, duplicate or repeated edges where relevant, all-equal values, already-optimal input, and one adversarial case that defeats a naive O(n^2) or brute-force approach. Give each test a kind from: general, boundary, max, single, disconnected, duplicate, corner.
+  - At least 10 hidden tests. Cover: small cases, general cases, boundary values, the maximum-size shape, a single node or element, disconnected graph or forest where relevant, duplicate or repeated edges where relevant, all-equal values, already-optimal input, and one adversarial case that defeats a naive O(n^2) or brute-force approach. Give each test a kind from: general, boundary, max, single, disconnected, duplicate, corner — include at least 2 tests with kind "boundary" or "corner" and at least 1 with kind "max".
   - Test marks: decimal multiples of 0.5, must sum to EXACTLY 10 per problem; give harder tests more marks.
   - Keep literal test inputs under 4 KB. For a large test (kind max), instead supply "inputGenerator": {"language":"python","code":"..."} that prints the input deterministically (fixed seed), and set "expectedOutput": "AUTO". PET Prep will run your referenceSolution to fill AUTO outputs. Use AUTO only for generated inputs, never for literal ones. Literal tests need exact expectedOutput.
   - referenceSolution: a correct, efficient solution in C++ or Python that reads standard input and writes standard output in exactly the stated format. PET Prep will run it against every test and reject the paper on any mismatch, so work out every literal expected output with care. If you have a code-execution tool, run the reference solution on every test and copy the real output.
@@ -59,7 +59,7 @@ BEFORE YOU REPLY, SELF-CHECK AND FIX
   [ ] Every id is unique and follows the pattern; every MCQ has 4 distinct options and a valid answerIndex.
   [ ] Every numeric answer and snippet output was re-derived.
   [ ] Difficulty counts and topic coverage match the lists above.
-  [ ] (Part C) a tree or graph problem exists; the two problems are in different domains; at least 10 tests each; test marks sum to 10; sample outputs are correct; the reference solution is correct.
+  [ ] (Part C) a tree or graph problem exists (isTreeOrGraph:true and tree/graph wording in title or statement); the two problems are in different domains; at least 10 tests each (including >= 2 boundary/corner and >= 1 max); test marks sum to 10; sample outputs are correct; the reference solution is correct.
   [ ] The JSON is valid and complete, not truncated.
 If the reply would be too long, stop cleanly at a question boundary and tell me, but never output invalid or incomplete JSON as if it were finished.
 
