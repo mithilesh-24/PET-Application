@@ -8,7 +8,17 @@ describe('frontend routes', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ papers: [], paper: { id: 'p1', paperId: 'paper-1', title: 'Mock' } }),
+      json: async () => ({
+        papers: [],
+        paper: { id: 'p1', paperId: 'paper-1', title: 'Mock' },
+        attemptId: 'attempt-1',
+        paperTitle: 'Mock Paper',
+        status: 'not_started',
+        phase: 'not_started',
+        nextSection: 'S1',
+        violationCount: 0,
+        violationLimit: 3,
+      }),
     });
   });
 
@@ -16,7 +26,7 @@ describe('frontend routes', () => {
     ['/', 'PET PREP'],
     ['/upload', 'Upload Question Paper'],
     ['/instructions/paper-1', 'Examination Instructions'],
-    ['/exam/attempt-1', 'Examination'],
+    ['/exam/attempt-1', 'Ready to begin Section 1 — Common to All'],
     ['/results/attempt-1', 'Exam Results'],
     ['/history', 'Past Tests'],
     ['/settings', 'Settings'],

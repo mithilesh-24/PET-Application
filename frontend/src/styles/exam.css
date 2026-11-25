@@ -1,0 +1,358 @@
+.exam-timer {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #f7f7f7;
+  color: #222;
+}
+
+.exam-timer.timer-warning {
+  color: #c5221f;
+  border-color: #c5221f;
+  background: #fce8e6;
+}
+
+.exam-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  color: #333;
+}
+
+.exam-badge-marks {
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.exam-status-pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #d0d0d0;
+  background: #f7f7f7;
+  color: #333;
+}
+
+.question-heading-focus:focus {
+  outline: none;
+}
+
+.question-heading-focus:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.question-text-block {
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #222;
+}
+
+.inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f3f3f3;
+  border: 1px solid #e0e0e0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.code-fenced-inline {
+  margin: 8px 0;
+  padding: 10px;
+  background: #f7f7f7;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+.mcq-options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.save-indicator {
+  font-size: 12px;
+  color: #555;
+}
+
+.save-indicator-saved {
+  color: #137333;
+  font-weight: 600;
+}
+
+.save-indicator-error {
+  color: #c5221f;
+  font-weight: 600;
+}
+
+.mcq-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mcq-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.mcq-option-row:hover {
+  background: #f7f7f7;
+}
+
+.mcq-option-row.selected {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.mcq-option-row input[type='radio'] {
+  margin-top: 3px;
+  accent-color: #1a73e8;
+}
+
+.mcq-option-letter {
+  font-weight: 700;
+  min-width: 20px;
+  color: #222;
+}
+
+.mcq-option-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.snippet-container {
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.snippet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f3f3f3;
+  border-bottom: 1px solid #d0d0d0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.snippet-scroll {
+  max-height: 320px;
+  overflow: auto;
+  padding: 8px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.snippet-code-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.snippet-line-num {
+  width: 42px;
+  padding: 0 10px 0 8px;
+  text-align: right;
+  color: #777;
+  user-select: none;
+  border-right: 1px solid #e0e0e0;
+  vertical-align: top;
+}
+
+.snippet-line-code {
+  padding: 0 12px;
+  white-space: pre;
+  vertical-align: top;
+}
+
+.info-panel-heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #e5e5e5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #1a73e8;
+}
+
+.info-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-stat-box {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px;
+  background: #f7f7f7;
+}
+
+.info-stat-label {
+  display: block;
+  font-size: 11px;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.info-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+}
+
+.display-grid-note {
+  font-size: 12px;
+  color: #555;
+  margin: 0;
+}
+
+.display-number-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.display-num-cell {
+  text-align: center;
+  padding: 4px 0;
+  font-size: 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  background: #f7f7f7;
+  color: #555;
+  user-select: none;
+  cursor: default;
+}
+
+.display-num-cell.current {
+  border-color: #1a73e8;
+  background: #1a73e8;
+  color: #fff;
+  font-weight: 700;
+}
+
+.display-num-cell.seen {
+  background: #e8f0fe;
+  border-color: #a8c7fa;
+  color: #174ea6;
+}
+
+.exam-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 200;
+}
+
+.exam-dialog {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.exam-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.exam-dialog-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.transition-card {
+  max-width: 680px;
+  margin: 40px auto;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 24px;
+}
+
+.transition-card h1 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.transition-countdown {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  color: #1a73e8;
+}
+
+/* Minimal Prism light tokens bundled offline */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #5f6368;
+}
+.token.punctuation {
+  color: #3c4043;
+}
+.token.keyword,
+.token.operator,
+.token.boolean {
+  color: #1a73e8;
+  font-weight: 600;
+}
+.token.string,
+.token.char {
+  color: #137333;
+}
+.token.number {
+  color: #b06000;
+}
+.token.function {
+  color: #7627bb;
+}

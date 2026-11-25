@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0"
