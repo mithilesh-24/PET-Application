@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import { pathToFileURL } from 'node:url';
 import { config } from './config.js';
 import healthRoutes from './routes/healthRoutes.js';
+import compilerRoutes from './routes/compilerRoutes.js';
+import { cleanupStaleSandbox } from './compiler/dockerRunner.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 export function createApp({ registerExtraRoutes } = {}) {
@@ -31,6 +33,7 @@ export function createApp({ registerExtraRoutes } = {}) {
   app.use(express.urlencoded({ extended: true, limit: config.jsonBodyLimit }));
 
   app.use('/api', healthRoutes);
+  app.use('/api', compilerRoutes);
 
   if (typeof registerExtraRoutes === 'function') {
     registerExtraRoutes(app);
@@ -45,6 +48,7 @@ export function createApp({ registerExtraRoutes } = {}) {
 const isMainModule = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
+  cleanupStaleSandbox().catch(() => {});
   const app = createApp();
   app.listen(config.port, () => {
     console.log(`PET Prep backend listening on http://localhost:${config.port}`);

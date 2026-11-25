@@ -16,6 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "doctor": "node backend/compiler/doctor.js",
+    "setup:docker": "docker build -f docker/Dockerfile.runner -t pet-runner:1 .",
     "setup": "node scripts/setup.mjs"
   },
   "devDependencies": {
