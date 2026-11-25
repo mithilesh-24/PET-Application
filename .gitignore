@@ -11,4 +11,6 @@ keys/
 *.key
 .env
 coverage/
+test-results/
+playwright-report/
 .DS_Store

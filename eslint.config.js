@@ -56,7 +56,7 @@ export default [
     },
   },
   {
-    files: ['**/*.test.{js,jsx}'],
+    files: ['**/*.test.{js,jsx}', 'e2e/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
