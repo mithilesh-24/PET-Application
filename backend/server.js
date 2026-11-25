@@ -9,6 +9,7 @@ import { createRepositories } from './database/repositories.js';
 import { defaultKeyStore } from './services/keyStore.js';
 import { verifyCodingTests } from './services/codingVerifier.js';
 import { createExamEngine } from './services/examEngine.js';
+import { createJudgeService } from './services/judgeService.js';
 import healthRoutes from './routes/healthRoutes.js';
 import compilerRoutes from './routes/compilerRoutes.js';
 import { createSettingsRoutes } from './routes/settingsRoutes.js';
@@ -48,10 +49,20 @@ export function createApp({
       }),
   });
 
+  const judgeService = createJudgeService({
+    repos,
+    examEngine,
+    nowFn,
+  });
+  examEngine.setS2AExpiryHandler((attemptId) =>
+    judgeService.autoSubmitUnsubmittedDrafts(attemptId)
+  );
+
   const app = express();
   app.locals.db = database;
   app.locals.repos = repos;
   app.locals.examEngine = examEngine;
+  app.locals.judgeService = judgeService;
 
   app.use(helmet());
   app.use(
@@ -85,7 +96,7 @@ export function createApp({
       codingVerifier,
     })
   );
-  app.use('/api', createExamRoutes({ examEngine }));
+  app.use('/api', createExamRoutes({ examEngine, judgeService }));
 
   if (typeof registerExtraRoutes === 'function') {
     registerExtraRoutes(app);

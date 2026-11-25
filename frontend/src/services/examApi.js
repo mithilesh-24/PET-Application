@@ -55,3 +55,27 @@ export function terminateAttempt(attemptId, reason) {
     body: JSON.stringify({ reason }),
   });
 }
+
+export function runCode(attemptId, { questionId, language, source, stdin }) {
+  return apiRequest(`/attempts/${encodeURIComponent(attemptId)}/code/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionId, language, source, stdin }),
+  });
+}
+
+export function submitCode(attemptId, { questionId, language, source }) {
+  return apiRequest(`/attempts/${encodeURIComponent(attemptId)}/code/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionId, language, source }),
+  });
+}
+
+export function saveCodeDraft(attemptId, { questionId, language, source }) {
+  return apiRequest(`/attempts/${encodeURIComponent(attemptId)}/code/draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionId, language, source }),
+  });
+}

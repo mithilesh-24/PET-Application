@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/codetantra-layout.css';
 import '../styles/exam.css';
@@ -8,6 +8,8 @@ import SafeQuestionText from '../components/SafeQuestionText.jsx';
 import SnippetBlock from '../components/SnippetBlock.jsx';
 import Timer from '../components/Timer.jsx';
 import TransitionScreen from '../components/TransitionScreen.jsx';
+
+const CodingWorkspace = lazy(() => import('../components/CodingWorkspace.jsx'));
 import {
   getCurrentQuestion,
   getExamState,
@@ -56,6 +58,7 @@ export default function Exam() {
   const questionLoadedAtRef = useRef(Date.now());
   const accumulatedMsRef = useRef(0);
   const exitingLegitimatelyRef = useRef(false);
+  const saveCodingDraftRef = useRef(null);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -313,6 +316,7 @@ export default function Exam() {
     if (
       !isFullscreen ||
       examState?.phase !== 'in_section' ||
+      questionData?.question?.type === 'coding' ||
       confirmUnanswered ||
       confirmSubmit ||
       warningDialog
@@ -321,6 +325,7 @@ export default function Exam() {
     }
     const handleEnter = (e) => {
       if (e.key !== 'Enter') return;
+      if (e.target?.closest?.('.monaco-editor')) return;
       const tag = e.target?.tagName?.toLowerCase();
       if (tag === 'button' || tag === 'textarea' || tag === 'a') return;
       e.preventDefault();
@@ -331,6 +336,7 @@ export default function Exam() {
   }, [
     isFullscreen,
     examState?.phase,
+    questionData?.question?.type,
     confirmUnanswered,
     confirmSubmit,
     warningDialog,
@@ -637,7 +643,50 @@ export default function Exam() {
         </div>
       )}
 
-      {q && (
+      {q && q.type === 'coding' && (
+        <Suspense
+          fallback={
+            <div className="transition-card">
+              <h1>Loading Coding Workspace...</h1>
+            </div>
+          }
+        >
+          <CodingWorkspace
+            attemptId={attemptId}
+            question={q}
+            codingDraft={questionData.codingDraft}
+            questionIndex={questionData.index}
+            totalInSection={questionData.totalInSection}
+            answeredCount={questionData.answeredCount}
+            unansweredCount={questionData.unansweredCount}
+            secondsRemaining={questionData.secondsRemaining}
+            violationCount={examState.violationCount}
+            violationLimit={examState.violationLimit}
+            onSubmittedSuccess={() => {
+              getExamState(attemptId)
+                .then((st) => {
+                  setExamState(st);
+                  setQuestionData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          answeredCount: st.answeredCount,
+                          unansweredCount: st.unansweredCount,
+                          codingDraft: { ...(prev.codingDraft || {}), hasSubmitted: true },
+                        }
+                      : prev
+                  );
+                })
+                .catch(() => {});
+            }}
+            registerSaveDraftAction={(fn) => {
+              saveCodingDraftRef.current = fn;
+            }}
+          />
+        </Suspense>
+      )}
+
+      {q && q.type !== 'coding' && (
         <main className="exam-body">
           <section className="exam-question-col" aria-label="Question workspace">
             <h2
@@ -646,42 +695,20 @@ export default function Exam() {
               className="question-heading-focus"
               style={{ margin: 0, fontSize: 16 }}
             >
-              {q.type === 'coding'
-                ? `${q.id}: ${q.title}`
-                : `Question ${questionData.questionNumber}`}
+              Question {questionData.questionNumber}
             </h2>
 
             {q.type === 'snippet' && <SnippetBlock language={q.language} code={q.code} />}
 
-            {q.type !== 'coding' ? (
-              <>
-                <SafeQuestionText text={q.text} />
-                <MCQOptions
-                  options={q.options}
-                  selectedIndex={selectedIndex}
-                  onSelect={handleSelectOption}
-                  saveStatus={saveStatus}
-                  onRetry={() => selectedIndex !== null && handleSelectOption(selectedIndex)}
-                  disabled={busy}
-                />
-              </>
-            ) : (
-              <div className="question-text-block">
-                <p>{q.statement}</p>
-                <p>
-                  <strong>Input Format:</strong> {q.inputFormat}
-                </p>
-                <p>
-                  <strong>Output Format:</strong> {q.outputFormat}
-                </p>
-                <p>
-                  <strong>Constraints:</strong> {q.constraints}
-                </p>
-                <p className="muted-text">
-                  (Interactive Monaco editor &amp; hidden-test judge arrive in M9.)
-                </p>
-              </div>
-            )}
+            <SafeQuestionText text={q.text} />
+            <MCQOptions
+              options={q.options}
+              selectedIndex={selectedIndex}
+              onSelect={handleSelectOption}
+              saveStatus={saveStatus}
+              onRetry={() => selectedIndex !== null && handleSelectOption(selectedIndex)}
+              disabled={busy}
+            />
           </section>
 
           <ProgressIndicator
@@ -698,14 +725,25 @@ export default function Exam() {
 
       <footer className="exam-actionbar">
         <div className="exam-actionbar-left">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy || !q || q.type === 'coding' || selectedIndex === null}
-            onClick={handleClearResponse}
-          >
-            Clear Response
-          </button>
+          {q?.type === 'coding' ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => saveCodingDraftRef.current?.()}
+            >
+              Save Draft
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy || !q || selectedIndex === null}
+              onClick={handleClearResponse}
+            >
+              Clear Response
+            </button>
+          )}
         </div>
 
         <div className="exam-actionbar-right">

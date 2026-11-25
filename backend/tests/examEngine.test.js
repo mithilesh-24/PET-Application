@@ -32,6 +32,7 @@ async function setupExamHarness({
     db,
     keyStore,
     encryptedPapersDir,
+    codingVerifier: async () => ({ ok: true, failures: [], warnings: [] }),
     nowFn: () => fakeNow,
     sectionDurationMs,
     transitionGraceMs,

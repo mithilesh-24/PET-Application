@@ -25,6 +25,7 @@ async function setupHarness({ initialNow = 1_700_000_000_000 } = {}) {
     db,
     keyStore: createKeyStore({ keyDir, keytar: null }),
     encryptedPapersDir,
+    codingVerifier: async () => ({ ok: true, failures: [], warnings: [] }),
     nowFn: () => fakeNow,
   });
 

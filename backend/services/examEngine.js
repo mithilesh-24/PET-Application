@@ -104,6 +104,11 @@ export function createExamEngine({
   onAttemptCompleted = null,
 } = {}) {
   const decryptedPaperCache = new Map();
+  let s2aExpiryHandler = null;
+
+  function setS2AExpiryHandler(fn) {
+    s2aExpiryHandler = fn;
+  }
 
   async function loadDecryptedPaper(paperRow) {
     if (decryptedPaperCache.has(paperRow.id)) {
@@ -152,11 +157,12 @@ export function createExamEngine({
       attempt.status === 'terminated' ||
       attempt.status === 'abandoned'
     ) {
-      return { attempt, completedNow: false };
+      return { attempt, completedNow: false, s2aExpiredNow: false };
     }
 
     let sections = repos.sectionStateRepo.getByAttempt(attemptId);
     let completedNow = false;
+    let s2aExpiredNow = false;
     let progressed = true;
 
     while (progressed) {
@@ -181,6 +187,7 @@ export function createExamEngine({
             current_index: 0,
           });
           completedNow = true;
+          s2aExpiredNow = true;
           break;
         } else {
           repos.attemptsRepo.updateState(attemptId, {
@@ -227,12 +234,33 @@ export function createExamEngine({
     return {
       attempt: repos.attemptsRepo.getById(attemptId),
       completedNow,
+      s2aExpiredNow,
     };
   });
 
   function reconcileAttempt(attemptId) {
     const now = nowFn();
     const res = reconcileTx(attemptId, now);
+    if (res?.s2aExpiredNow && typeof s2aExpiryHandler === 'function') {
+      Promise.resolve(s2aExpiryHandler(attemptId))
+        .catch(() => {})
+        .finally(() => {
+          if (res?.completedNow) triggerCompletionHook(attemptId);
+        });
+      return res?.attempt || null;
+    }
+    if (res?.completedNow) {
+      triggerCompletionHook(attemptId);
+    }
+    return res?.attempt || null;
+  }
+
+  async function reconcileAttemptAsync(attemptId) {
+    const now = nowFn();
+    const res = reconcileTx(attemptId, now);
+    if (res?.s2aExpiredNow && typeof s2aExpiryHandler === 'function') {
+      await Promise.resolve(s2aExpiryHandler(attemptId)).catch(() => {});
+    }
     if (res?.completedNow) {
       triggerCompletionHook(attemptId);
     }
@@ -295,7 +323,7 @@ export function createExamEngine({
   }
 
   async function getState(attemptId) {
-    reconcileAttempt(attemptId);
+    await reconcileAttemptAsync(attemptId);
     const { attempt, paperRow } = getAttemptAndPaperOrThrow(attemptId);
     const paperObj = await loadDecryptedPaper(paperRow);
     const sections = repos.sectionStateRepo.getByAttempt(attemptId);
@@ -782,6 +810,9 @@ export function createExamEngine({
     const outcome = submitSectionTx(attemptId, paperObj, now);
 
     if (outcome.completed) {
+      if (outcome.submittedSection === 'S2A' && typeof s2aExpiryHandler === 'function') {
+        await Promise.resolve(s2aExpiryHandler(attemptId)).catch(() => {});
+      }
       triggerCompletionHook(attemptId);
     }
 
@@ -919,7 +950,9 @@ export function createExamEngine({
     terminateAttempt,
     recordViolation,
     reconcileAttempt,
+    reconcileAttemptAsync,
     reconcileAllOpenAttempts,
+    setS2AExpiryHandler,
     loadDecryptedPaper,
     getOrderedSectionQuestions,
     getDataFilePath(paperRow) {

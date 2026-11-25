@@ -37,7 +37,26 @@ const terminateSchema = z
   })
   .optional();
 
-export function createExamRoutes({ examEngine }) {
+const codeRunSchema = z.object({
+  questionId: z.string().min(1),
+  language: z.enum(['c', 'cpp', 'java', 'python']),
+  source: z.string().min(1),
+  stdin: z.string().optional(),
+});
+
+const codeSubmitSchema = z.object({
+  questionId: z.string().min(1),
+  language: z.enum(['c', 'cpp', 'java', 'python']),
+  source: z.string().min(1),
+});
+
+const codeDraftSchema = z.object({
+  questionId: z.string().min(1),
+  language: z.enum(['c', 'cpp', 'java', 'python']),
+  source: z.string(),
+});
+
+export function createExamRoutes({ examEngine, judgeService }) {
   const router = Router();
 
   router.post('/attempts', (req, res, next) => {
@@ -127,6 +146,47 @@ export function createExamRoutes({ examEngine }) {
       next(err);
     }
   });
+
+  if (judgeService) {
+    router.post('/attempts/:id/code/run', async (req, res, next) => {
+      try {
+        const parsed = codeRunSchema.parse(req.body);
+        const result = await judgeService.runCustomCode({
+          attemptId: req.params.id,
+          ...parsed,
+        });
+        res.json(result);
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    router.post('/attempts/:id/code/submit', async (req, res, next) => {
+      try {
+        const parsed = codeSubmitSchema.parse(req.body);
+        const result = await judgeService.submitCode({
+          attemptId: req.params.id,
+          ...parsed,
+        });
+        res.json(result);
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    router.post('/attempts/:id/code/draft', async (req, res, next) => {
+      try {
+        const parsed = codeDraftSchema.parse(req.body);
+        const result = await judgeService.saveDraft({
+          attemptId: req.params.id,
+          ...parsed,
+        });
+        res.json(result);
+      } catch (err) {
+        next(err);
+      }
+    });
+  }
 
   return router;
 }

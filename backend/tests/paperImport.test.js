@@ -11,7 +11,10 @@ import { createValidFullPaper, splitIntoParts } from './fixtures/paperFixtures.j
 const tempDirs = [];
 const openDbs = [];
 
-async function setupHarness({ dbPath, codingVerifier } = {}) {
+async function setupHarness({
+  dbPath,
+  codingVerifier = async () => ({ ok: true, failures: [], warnings: [] }),
+} = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pet-prep-m4-'));
   tempDirs.push(dir);
   const encryptedPapersDir = path.join(dir, 'encrypted');
