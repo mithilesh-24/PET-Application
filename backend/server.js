@@ -10,11 +10,14 @@ import { defaultKeyStore } from './services/keyStore.js';
 import { verifyCodingTests } from './services/codingVerifier.js';
 import { createExamEngine } from './services/examEngine.js';
 import { createJudgeService } from './services/judgeService.js';
+import { createEvaluationService } from './services/evaluationService.js';
+import { createResultService } from './services/resultService.js';
 import healthRoutes from './routes/healthRoutes.js';
 import compilerRoutes from './routes/compilerRoutes.js';
 import { createSettingsRoutes } from './routes/settingsRoutes.js';
 import { createPaperRoutes } from './routes/paperRoutes.js';
 import { createExamRoutes } from './routes/examRoutes.js';
+import { createResultRoutes } from './routes/resultRoutes.js';
 import { cleanupStaleSandbox } from './compiler/dockerRunner.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
@@ -33,6 +36,8 @@ export function createApp({
   const database = db || openDatabase({ dataDir: config.dataDir });
   const repos = createRepositories(database);
 
+  let evaluationService;
+
   const examEngine = createExamEngine({
     db: database,
     repos,
@@ -40,14 +45,20 @@ export function createApp({
     nowFn,
     sectionDurationMs,
     transitionGraceMs,
-    onAttemptCompleted:
-      onAttemptCompleted ||
-      (async () => {
-        if (config.nodeEnv !== 'test') {
-          await backupDatabase(database).catch(() => {});
-        }
-      }),
+    onAttemptCompleted: async (attemptId) => {
+      if (evaluationService) {
+        await evaluationService.evaluateAttempt(attemptId).catch(() => {});
+      }
+      if (typeof onAttemptCompleted === 'function') {
+        await Promise.resolve(onAttemptCompleted(attemptId));
+      } else if (config.nodeEnv !== 'test') {
+        await backupDatabase(database).catch(() => {});
+      }
+    },
   });
+
+  evaluationService = createEvaluationService({ repos, examEngine, nowFn });
+  const resultService = createResultService({ repos, examEngine, evaluationService });
 
   const judgeService = createJudgeService({
     repos,
@@ -63,6 +74,8 @@ export function createApp({
   app.locals.repos = repos;
   app.locals.examEngine = examEngine;
   app.locals.judgeService = judgeService;
+  app.locals.evaluationService = evaluationService;
+  app.locals.resultService = resultService;
 
   app.use(helmet());
   app.use(
@@ -97,6 +110,7 @@ export function createApp({
     })
   );
   app.use('/api', createExamRoutes({ examEngine, judgeService }));
+  app.use('/api', createResultRoutes({ resultService }));
 
   if (typeof registerExtraRoutes === 'function') {
     registerExtraRoutes(app);

@@ -20,6 +20,31 @@ describe('frontend routes', () => {
         violationLimit: 3,
         tools: [],
         dockerReady: false,
+        total: 80,
+        section1: 30,
+        section2: 35,
+        section2a: 15,
+        breakdown: {
+          percentage: 80,
+          counts: { totalQuestions: 67, correct: 50, incorrect: 10, unanswered: 7 },
+          sections: {
+            S1: { obtained: 30, possible: 40, timeMs: 1000 },
+            S2: { obtained: 35, possible: 40, timeMs: 1000 },
+            S2A: { obtained: 15, possible: 20, timeMs: 1000 },
+          },
+          categories: {
+            aptitude: { obtained: 10, possible: 15 },
+            reasoning: { obtained: 10, possible: 15 },
+            verbal: { obtained: 10, possible: 10 },
+          },
+          snippets: { obtained: 8, possible: 10 },
+          subjects: {
+            CC01: { code: 'CC01', name: 'DSA', obtained: 5, possible: 6 },
+          },
+          coding: { obtained: 15, possible: 20, testsPassed: 15, testsTotal: 20, problems: [] },
+          time: { totalMs: 3000 },
+          violations: [],
+        },
       }),
     });
   });
@@ -29,7 +54,7 @@ describe('frontend routes', () => {
     ['/upload', 'Upload Question Paper'],
     ['/instructions/paper-1', 'Examination Instructions'],
     ['/exam/attempt-1', 'Start-of-Examination Gate'],
-    ['/results/attempt-1', 'Exam Results'],
+    ['/results/attempt-1', 'Examination Results'],
     ['/history', 'Past Tests'],
     ['/settings', 'Settings'],
     ['/syllabus', 'PET Syllabus'],
