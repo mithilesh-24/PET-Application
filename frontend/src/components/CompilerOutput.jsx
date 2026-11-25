@@ -220,7 +220,7 @@ export default function CompilerOutput({
                           </div>
                           <div>
                             <span className="muted-text">Expected:</span>
-                            <pre className="output-pre">{s.expectedOutput}</pre>
+                            <pre className="output-pre">{s.sampleExpected}</pre>
                           </div>
                           <div>
                             <span className="muted-text">Actual:</span>

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { assertPathInsideDir } from '../schemas/routeParams.js';
 import { decryptPaper } from './decryptionService.js';
 import { encryptAndWritePaper } from './encryptionService.js';
 import { defaultKeyStore } from './keyStore.js';
@@ -202,7 +203,10 @@ export async function importPaperFiles({
   }
 
   const paperToStore = verifyResult.resolvedPaper || fullPaper;
-  const targetPath = path.join(encryptedPapersDir, `${paperToStore.paperId}.pet`);
+  const targetPath = assertPathInsideDir(
+    encryptedPapersDir,
+    path.join(encryptedPapersDir, `${paperToStore.paperId}.pet`)
+  );
   const { keyId, sha256 } = await encryptAndWritePaper(paperToStore, targetPath, { keyStore });
 
   const now = Date.now();

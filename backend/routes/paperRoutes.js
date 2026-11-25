@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import multer from 'multer';
 import { Router } from 'express';
 import { AppError } from '../middleware/errorHandler.js';
+import { assertPathInsideDir, parseSafeIdParam } from '../schemas/routeParams.js';
 import { importPaperFiles, sanitizePaperMeta } from '../services/paperImportService.js';
 
 const paperUpload = multer({
@@ -39,23 +40,30 @@ export function createPaperRoutes({ papersRepo, keyStore, encryptedPapersDir, co
   });
 
   router.get('/papers/:id', (req, res, next) => {
-    const row = papersRepo.getById(req.params.id) || papersRepo.getByPaperId(req.params.id);
-    if (!row) {
-      return next(new AppError(404, 'NOT_FOUND', `Paper "${req.params.id}" not found.`));
+    try {
+      const safeId = parseSafeIdParam(req.params.id);
+      const row = papersRepo.getById(safeId) || papersRepo.getByPaperId(safeId);
+      if (!row) {
+        return next(new AppError(404, 'NOT_FOUND', `Paper "${safeId}" not found.`));
+      }
+      return res.json({ paper: sanitizePaperMeta(row) });
+    } catch (err) {
+      return next(err);
     }
-    return res.json({ paper: sanitizePaperMeta(row) });
   });
 
   router.delete('/papers/:id', async (req, res, next) => {
     try {
-      const row = papersRepo.getById(req.params.id) || papersRepo.getByPaperId(req.params.id);
+      const safeId = parseSafeIdParam(req.params.id);
+      const row = papersRepo.getById(safeId) || papersRepo.getByPaperId(safeId);
       if (!row) {
-        return next(new AppError(404, 'NOT_FOUND', `Paper "${req.params.id}" not found.`));
+        return next(new AppError(404, 'NOT_FOUND', `Paper "${safeId}" not found.`));
+      }
+      if (row.file_path) {
+        const safePath = assertPathInsideDir(encryptedPapersDir, row.file_path);
+        await fs.unlink(safePath).catch(() => {});
       }
       papersRepo.deleteById(row.id);
-      if (row.file_path) {
-        await fs.unlink(row.file_path).catch(() => {});
-      }
       return res.json({ deleted: true, id: row.id, paperId: row.paper_id });
     } catch (err) {
       return next(err);

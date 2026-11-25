@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler.js';
+import { parseSafeIdParam } from '../schemas/routeParams.js';
 
 const compareQuerySchema = z.object({
   ids: z.string().min(1, 'ids query parameter is required.'),
@@ -50,11 +51,12 @@ export function createHistoryRoutes({ historyService }) {
 
   router.get('/attempts/:id/export', async (req, res, next) => {
     try {
+      const attemptId = parseSafeIdParam(req.params.id);
       const parsed = exportQuerySchema.safeParse(req.query);
       if (!parsed.success) {
         throw new AppError(400, 'VALIDATION_ERROR', 'Export format must be json or csv.');
       }
-      const exported = await historyService.exportAttempt(req.params.id, parsed.data.format);
+      const exported = await historyService.exportAttempt(attemptId, parsed.data.format);
       res.setHeader('Content-Type', exported.contentType);
       res.setHeader('Content-Disposition', `attachment; filename="${exported.filename}"`);
       res.send(exported.body);
@@ -65,7 +67,8 @@ export function createHistoryRoutes({ historyService }) {
 
   router.delete('/attempts/:id', (req, res, next) => {
     try {
-      const result = historyService.deleteAttempt(req.params.id);
+      const attemptId = parseSafeIdParam(req.params.id);
+      const result = historyService.deleteAttempt(attemptId);
       res.json(result);
     } catch (err) {
       next(err);

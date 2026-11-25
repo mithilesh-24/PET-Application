@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { parseSafeIdParam } from '../schemas/routeParams.js';
 
 const createAttemptSchema = z.object({
   paperId: z.string().min(1),
@@ -58,6 +59,15 @@ const codeDraftSchema = z.object({
 
 export function createExamRoutes({ examEngine, judgeService }) {
   const router = Router();
+
+  router.param('id', (_req, _res, next, id) => {
+    try {
+      parseSafeIdParam(id);
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   router.post('/attempts', (req, res, next) => {
     try {

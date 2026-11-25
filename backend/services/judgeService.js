@@ -1,4 +1,4 @@
-import { runSubmission, runSubmissionBatch } from '../compiler/dockerRunner.js';
+import { runSubmission, runSubmissionBatch } from '../compiler/executionEngine.js';
 import { outputsMatch } from '../compiler/languageRunner.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -141,7 +141,7 @@ export function createJudgeService({
         runtimeMs: r.ms,
         memoryKb: r.memoryKb,
         input: s.input,
-        expectedOutput: s.output,
+        sampleExpected: s.output,
         actualOutput: r.stdout,
       };
     });

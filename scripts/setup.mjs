@@ -16,10 +16,13 @@ console.log(`Node.js ${process.version} OK`);
 console.log('Checking/installing workspace dependencies...');
 execSync('npm install', { cwd: rootDir, stdio: 'inherit' });
 
+if (process.platform === 'win32') {
+  console.log('Building Windows native AppContainer + Job Object sandbox launcher...');
+  execSync('npm run setup:sandbox', { cwd: rootDir, stdio: 'inherit' });
+}
+
 const doctorPath = path.join(rootDir, 'backend', 'compiler', 'doctor.js');
 if (existsSync(doctorPath)) {
-  console.log('Running compiler & Docker doctor...');
+  console.log('Running compiler & OS sandbox doctor...');
   execSync(`node "${doctorPath}"`, { cwd: rootDir, stdio: 'inherit' });
-} else {
-  console.log('Compiler doctor not installed yet (added in M8).');
 }

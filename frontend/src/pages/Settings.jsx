@@ -9,6 +9,8 @@ export default function Settings() {
   const [compilers, setCompilers] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -60,13 +62,52 @@ export default function Settings() {
     }
   }
 
+  async function handleBackupNow() {
+    setBackingUp(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await apiRequest('/settings/backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      setMessage(`Database backup created at: ${res.backupPath}`);
+    } catch (err) {
+      setError(err.message || 'Database backup failed.');
+    } finally {
+      setBackingUp(false);
+    }
+  }
+
+  async function handleVerifySandbox() {
+    setRebuilding(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await apiRequest('/settings/rebuild-runner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.compilers) {
+        setCompilers(res.compilers);
+      }
+      setMessage('Local sandbox verified successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to verify sandbox.');
+    } finally {
+      setRebuilding(false);
+    }
+  }
+
   return (
     <div className="academic-shell">
       <header className="site-header">
         <div>
           <h1 className="site-title">Settings</h1>
           <p className="site-subtitle">
-            Examination proctoring defaults, local data storage, and compiler sandbox status
+            Examination proctoring defaults, local data storage, and sandbox status
           </p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={() => navigate('/')}>
@@ -108,22 +149,71 @@ export default function Settings() {
               </button>
             </div>
           </form>
-          {dataDir && (
-            <p className="muted-text" style={{ marginTop: 12 }}>
-              <strong>Local Data Folder:</strong> <code>{dataDir}</code>
-            </p>
-          )}
         </section>
 
         <section className="panel">
-          <h2>Compilers &amp; Docker Sandbox</h2>
+          <div className="panel-header-row">
+            <h2>Data Storage &amp; Database Backup</h2>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleBackupNow}
+              disabled={loading || backingUp}
+            >
+              {backingUp ? 'Backing up...' : 'Backup Now'}
+            </button>
+          </div>
+          {dataDir && (
+            <p>
+              <strong>Local Data Folder:</strong> <code>{dataDir}</code>
+            </p>
+          )}
+          <div className="meta-notes">
+            <p>
+              <strong>How to open the data folder:</strong>
+            </p>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+              <li>
+                <strong>Windows:</strong> Press <code>Win + R</code>, paste the path above, and
+                press Enter (or run <code>explorer &quot;{dataDir || '.'}&quot;</code>).
+              </li>
+              <li>
+                <strong>macOS:</strong> In Finder press <code>Cmd + Shift + G</code> and paste the
+                data folder path.
+              </li>
+              <li>
+                <strong>Linux:</strong> Run <code>xdg-open &quot;{dataDir || '.'}&quot;</code> in
+                your terminal.
+              </li>
+            </ul>
+            <p className="muted-text" style={{ marginTop: 8 }}>
+              Backups are written automatically on startup and exam completion inside{' '}
+              <code>database/backups/</code> (latest 10 snapshots retained).
+            </p>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header-row">
+            <h2>Compilers &amp; Sandbox Status</h2>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleVerifySandbox}
+              disabled={loading || rebuilding}
+            >
+              {rebuilding ? 'Verifying...' : 'Verify Sandbox'}
+            </button>
+          </div>
           {loading ? (
-            <p className="muted-text">Checking local compilers and Docker...</p>
+            <p className="muted-text">Checking local compilers and sandbox...</p>
           ) : compilers ? (
             <>
               <p>
-                <strong>Docker sandbox ready:</strong>{' '}
-                {compilers.dockerReady ? 'Yes (pet-runner:1)' : 'No — see hints below'}
+                <strong>Sandbox ready:</strong>{' '}
+                {compilers.sandboxReady
+                  ? `Yes — ${compilers.sandboxMode || compilers.sandboxDriver || 'active'}`
+                  : 'No — see hints below'}
               </p>
               <table className="data-table">
                 <thead>

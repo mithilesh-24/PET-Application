@@ -1,4 +1,4 @@
-import { runSubmission, runSubmissionBatch } from '../compiler/dockerRunner.js';
+import { runSubmission, runSubmissionBatch } from '../compiler/executionEngine.js';
 import { normaliseOutput, outputsMatch } from '../compiler/languageRunner.js';
 
 export async function verifyCodingTests(

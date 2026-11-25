@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { AppError } from '../middleware/errorHandler.js';
 
 export const SUPPORTED_LANGUAGES = ['c', 'cpp', 'java', 'python'];
@@ -21,14 +22,19 @@ export function outputsMatch(actual, expected) {
   return normaliseOutput(actual) === normaliseOutput(expected);
 }
 
-export function clampLimits({ timeLimitMs, memoryLimitMb } = {}) {
+export function clampLimits({
+  timeLimitMs,
+  memoryLimitMb,
+  defaultTimeLimitMs = DEFAULT_TIME_LIMIT_MS,
+  defaultMemoryLimitMb = DEFAULT_MEMORY_LIMIT_MB,
+} = {}) {
   const effectiveTimeMs = Number.isFinite(timeLimitMs)
     ? Math.max(500, Math.min(MAX_TIME_LIMIT_MS, Math.round(timeLimitMs)))
-    : DEFAULT_TIME_LIMIT_MS;
+    : Math.max(500, Math.min(MAX_TIME_LIMIT_MS, defaultTimeLimitMs));
 
   const effectiveMemoryMb = Number.isFinite(memoryLimitMb)
     ? Math.max(64, Math.min(MAX_MEMORY_LIMIT_MB, Math.round(memoryLimitMb)))
-    : DEFAULT_MEMORY_LIMIT_MB;
+    : Math.max(64, Math.min(MAX_MEMORY_LIMIT_MB, defaultMemoryLimitMb));
 
   return {
     timeLimitMs: effectiveTimeMs,
@@ -36,7 +42,41 @@ export function clampLimits({ timeLimitMs, memoryLimitMb } = {}) {
   };
 }
 
-export function getLanguageSpec(language, { memoryLimitMb = DEFAULT_MEMORY_LIMIT_MB } = {}) {
+/**
+ * Derive/normalize Java public class entry point so source always compiles cleanly to Main.java / Main.class.
+ */
+export function prepareJavaSource(source) {
+  const publicClassMatch = source.match(/\bpublic\s+class\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
+  if (publicClassMatch && publicClassMatch[1] !== 'Main') {
+    const className = publicClassMatch[1];
+    const updated = source
+      .replace(/\bpublic\s+class\s+[A-Za-z_$][A-Za-z0-9_$]*/, 'public class Main')
+      .replace(new RegExp(`\\bnew\\s+${className}\\s*\\(`, 'g'), 'new Main(');
+    return {
+      source: updated,
+      sourceFile: 'Main.java',
+      mainClass: 'Main',
+    };
+  }
+  return {
+    source,
+    sourceFile: 'Main.java',
+    mainClass: 'Main',
+  };
+}
+
+export function getLanguageRunner(
+  language,
+  {
+    memoryLimitMb = DEFAULT_MEMORY_LIMIT_MB,
+    workDir,
+    toolchainPaths = {},
+    platform = process.platform,
+    useStaticCpp = false,
+    cStd = 'c17',
+    cppStd = 'c++17',
+  } = {}
+) {
   if (!SUPPORTED_LANGUAGES.includes(language)) {
     throw new AppError(
       400,
@@ -45,40 +85,96 @@ export function getLanguageSpec(language, { memoryLimitMb = DEFAULT_MEMORY_LIMIT
     );
   }
 
-  const javaHeapMb = Math.max(48, memoryLimitMb - 48);
+  const rootDir = workDir || '.';
+  const outDir = path.join(rootDir, 'out');
+  const exeName = platform === 'win32' ? 'main.exe' : 'main';
+  const compiledBinary = path.join(outDir, exeName);
+  const javaHeapMb = Math.max(48, Math.min(memoryLimitMb - 64, Math.round(memoryLimitMb * 0.65)));
+
+  const gccBin = toolchainPaths.gcc || 'gcc';
+  const gppBin = toolchainPaths.gpp || 'g++';
+  const javacBin = toolchainPaths.javac || 'javac';
+  const javaBin = toolchainPaths.java || 'java';
+  const pythonBin = toolchainPaths.python || (platform === 'win32' ? 'python' : 'python3');
 
   switch (language) {
-    case 'c':
+    case 'c': {
+      const sourceFile = 'main.c';
+      const sourcePath = path.join(rootDir, sourceFile);
+      const flags = ['-O2', `-std=${cStd}`];
+      if (useStaticCpp && platform === 'win32') {
+        flags.push('-static-libgcc');
+      }
       return {
         language: 'c',
-        sourceFile: 'main.c',
-        compileCmd: ['gcc', '-O2', '-std=c17', '/work/main.c', '-o', '/work/out/main', '-lm'],
-        runCmd: ['/work/out/main'],
+        sourceFile,
+        sourcePath,
+        outDir,
+        preparedSource: (src) => src,
+        compileCmd: [gccBin, ...flags, sourcePath, '-o', compiledBinary, '-lm'],
+        runCmd: [compiledBinary],
       };
-    case 'cpp':
+    }
+    case 'cpp': {
+      const sourceFile = 'main.cpp';
+      const sourcePath = path.join(rootDir, sourceFile);
+      const flags = ['-O2', `-std=${cppStd}`];
+      if (useStaticCpp && platform === 'win32') {
+        flags.push('-static-libgcc', '-static-libstdc++');
+      }
       return {
         language: 'cpp',
-        sourceFile: 'main.cpp',
-        compileCmd: ['g++', '-O2', '-std=c++17', '/work/main.cpp', '-o', '/work/out/main'],
-        runCmd: ['/work/out/main'],
+        sourceFile,
+        sourcePath,
+        outDir,
+        preparedSource: (src) => src,
+        compileCmd: [gppBin, ...flags, sourcePath, '-o', compiledBinary],
+        runCmd: [compiledBinary],
       };
-    case 'java':
+    }
+    case 'java': {
+      const sourceFile = 'Main.java';
+      const sourcePath = path.join(rootDir, sourceFile);
       return {
         language: 'java',
-        sourceFile: 'Main.java',
-        compileCmd: ['javac', '-d', '/work/out', '/work/Main.java'],
-        runCmd: ['java', `-Xmx${javaHeapMb}m`, '-cp', '/work/out', 'Main'],
+        sourceFile,
+        sourcePath,
+        outDir,
+        preparedSource: (src) => prepareJavaSource(src).source,
+        compileCmd: [javacBin, '-J-Xmx256m', '-d', outDir, sourcePath],
+        runCmd: [
+          javaBin,
+          `-Xmx${javaHeapMb}m`,
+          '-Xss512k',
+          '-XX:+UseSerialGC',
+          '-XX:TieredStopAtLevel=1',
+          '-cp',
+          outDir,
+          'Main',
+        ],
       };
-    case 'python':
+    }
+    case 'python': {
+      const sourceFile = 'main.py';
+      const sourcePath = path.join(rootDir, sourceFile);
       return {
         language: 'python',
-        sourceFile: 'main.py',
+        sourceFile,
+        sourcePath,
+        outDir,
+        preparedSource: (src) => src,
         compileCmd: null,
-        runCmd: ['python3', '-u', '/work/main.py'],
+        runCmd: [pythonBin, '-I', '-B', '-u', sourcePath],
       };
+    }
     default:
       throw new AppError(400, 'VALIDATION_FAILED', `Unsupported language: ${language}`);
   }
+}
+
+// Legacy alias kept for unit tests importing getLanguageSpec
+export function getLanguageSpec(language, options = {}) {
+  return getLanguageRunner(language, options);
 }
 
 export function validateSourceInput(language, source) {

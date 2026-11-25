@@ -146,8 +146,8 @@ export default function PaperUploader({ onImported, onGoInstructions }) {
         />
         <p className="dropzone-title">Drag and drop 1 to 3 question paper files here</p>
         <p className="dropzone-sub">
-          Accepted: <code>.petdraft</code> (single full or Parts A, B, C) or <code>.pet</code> — max
-          10 MB per file
+          Accepted: <code>.petdraft</code> (single <strong>full</strong> paper, or all 3 Parts A +
+          B + C together) or <code>.pet</code> — max 10 MB per file
         </p>
         <button
           type="button"
@@ -198,6 +198,13 @@ export default function PaperUploader({ onImported, onGoInstructions }) {
           <div className="alert-title">
             Import rejected ({serverError.code}): {serverError.message}
           </div>
+          {serverError.errors?.some((e) => e.code === 'MISSING_PART') && (
+            <p style={{ marginTop: 6, fontWeight: 500 }}>
+              💡 Tip: The AI generates the paper in <strong>3 separate files</strong> (Part A, Part
+              B, and Part C). Select <em>all three</em> files together before clicking &ldquo;Upload
+              &amp; Verify Paper&rdquo;.
+            </p>
+          )}
           {Object.keys(groupedErrors).length > 0 && (
             <div className="grouped-errors">
               {Object.entries(groupedErrors).map(([section, items]) => (

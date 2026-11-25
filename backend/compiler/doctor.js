@@ -7,7 +7,7 @@ function pad(str, len) {
 
 export async function runDoctor() {
   const report = await detectCompilers();
-  console.log(`\nPET Prep Compiler & Sandbox Doctor (${report.platform})`);
+  console.log(`\nPET Prep Compiler & Native OS Sandbox Doctor (${report.platform})`);
   console.log('='.repeat(78));
   console.log(`${pad('Tool', 15)} | ${pad('Status', 10)} | ${pad('Version / Info', 32)} | Path`);
   console.log('-'.repeat(78));
@@ -20,7 +20,12 @@ export async function runDoctor() {
   }
 
   console.log('-'.repeat(78));
-  console.log(`Docker sandbox ready: ${report.dockerReady ? 'YES (pet-runner:1)' : 'NO'}`);
+  console.log(
+    `OS Sandbox ready: ${report.sandboxReady ? `YES (${report.sandboxMode})` : `NO (${report.sandboxStatus})`}`
+  );
+  if (report.sandboxDetails) {
+    console.log(`Sandbox details:  ${report.sandboxDetails}`);
+  }
 
   const missing = report.tools.filter((t) => !t.available && t.installHint);
   if (missing.length > 0) {

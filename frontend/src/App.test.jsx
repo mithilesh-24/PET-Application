@@ -23,7 +23,7 @@ describe('frontend routes', () => {
         violationCount: 0,
         violationLimit: 3,
         tools: [],
-        dockerReady: false,
+        sandboxReady: false,
         total: 80,
         section1: 30,
         section2: 35,

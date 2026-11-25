@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "concurrently -n API,WEB -c blue,green \"npm --workspace=backend run dev\" \"npm --workspace=frontend run dev\"",
     "build": "npm --workspace=frontend run build",
+    "verify:bundle": "node scripts/check-bundle.mjs",
     "start": "node backend/server.js",
     "test": "npm --workspace=backend test && npm --workspace=frontend test",
     "test:e2e": "playwright test",
@@ -18,7 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "doctor": "node backend/compiler/doctor.js",
-    "setup:docker": "docker build -f docker/Dockerfile.runner -t pet-runner:1 .",
+    "setup:sandbox": "node scripts/build-windows-sandbox.mjs",
     "setup": "node scripts/setup.mjs"
   },
   "devDependencies": {
