@@ -1,0 +1,29 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #222;
+  background-color: #f7f7f7;
+}
+
+.placeholder-page {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+}
+
+.placeholder-page h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}

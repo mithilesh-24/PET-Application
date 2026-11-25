@@ -1,0 +1,9 @@
+node_modules/
+frontend/dist/
+database/
+question-banks/
+results/
+execution/
+coverage/
+Past pet question/
+PET Prep - Module-by-Module Build Prompts.md

@@ -1,0 +1,14 @@
+node_modules/
+frontend/dist/
+database/*.db
+database/*.db-wal
+database/*.db-shm
+database/backups/
+question-banks/
+results/
+execution/temporary/
+keys/
+*.key
+.env
+coverage/
+.DS_Store
