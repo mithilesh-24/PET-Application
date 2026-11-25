@@ -8,10 +8,11 @@ import { openDatabase, backupDatabase } from './database/database.js';
 import { createRepositories } from './database/repositories.js';
 import { defaultKeyStore } from './services/keyStore.js';
 import { verifyCodingTests } from './services/codingVerifier.js';
+import { createExamEngine } from './services/examEngine.js';
 import healthRoutes from './routes/healthRoutes.js';
 import compilerRoutes from './routes/compilerRoutes.js';
 import { createPaperRoutes } from './routes/paperRoutes.js';
-import { createAttemptRoutes } from './routes/attemptRoutes.js';
+import { createExamRoutes } from './routes/examRoutes.js';
 import { cleanupStaleSandbox } from './compiler/dockerRunner.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
@@ -20,14 +21,36 @@ export function createApp({
   keyStore = defaultKeyStore,
   encryptedPapersDir = config.paths.encryptedPapersDir,
   codingVerifier = verifyCodingTests,
+  nowFn = () => Date.now(),
+  sectionDurationMs,
+  transitionGraceMs,
+  onAttemptCompleted,
+  enableReconcileInterval = false,
   registerExtraRoutes,
 } = {}) {
   const database = db || openDatabase({ dataDir: config.dataDir });
   const repos = createRepositories(database);
 
+  const examEngine = createExamEngine({
+    db: database,
+    repos,
+    keyStore,
+    nowFn,
+    sectionDurationMs,
+    transitionGraceMs,
+    onAttemptCompleted:
+      onAttemptCompleted ||
+      (async () => {
+        if (config.nodeEnv !== 'test') {
+          await backupDatabase(database).catch(() => {});
+        }
+      }),
+  });
+
   const app = express();
   app.locals.db = database;
   app.locals.repos = repos;
+  app.locals.examEngine = examEngine;
 
   app.use(helmet());
   app.use(
@@ -60,13 +83,7 @@ export function createApp({
       codingVerifier,
     })
   );
-  app.use(
-    '/api',
-    createAttemptRoutes({
-      papersRepo: repos.papersRepo,
-      attemptsRepo: repos.attemptsRepo,
-    })
-  );
+  app.use('/api', createExamRoutes({ examEngine }));
 
   if (typeof registerExtraRoutes === 'function') {
     registerExtraRoutes(app);
@@ -74,6 +91,18 @@ export function createApp({
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);
+
+  if (enableReconcileInterval) {
+    const timer = setInterval(() => {
+      try {
+        examEngine.reconcileAllOpenAttempts();
+      } catch (err) {
+        console.error('[examEngine] reconcile interval error:', err);
+      }
+    }, 5000);
+    timer.unref();
+    app.locals.reconcileTimer = timer;
+  }
 
   return app;
 }
@@ -86,7 +115,7 @@ if (isMainModule) {
   backupDatabase(db).catch((err) => {
     console.warn('[backup] Startup database backup skipped:', err.message);
   });
-  const app = createApp({ db });
+  const app = createApp({ db, enableReconcileInterval: true });
   app.listen(config.port, () => {
     console.log(`PET Prep backend listening on http://localhost:${config.port}`);
   });
