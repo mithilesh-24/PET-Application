@@ -132,6 +132,27 @@ export default function CodeEditor({
             scrollBeyondLastLine: false,
             automaticLayout: true,
             tabSize: 4,
+            // Exam mode: disable all autocomplete, IntelliSense, and code clues while typing
+            quickSuggestions: false,
+            suggestOnTriggerCharacters: false,
+            acceptSuggestionOnEnter: 'off',
+            acceptSuggestionOnCommitCharacter: false,
+            tabCompletion: 'off',
+            wordBasedSuggestions: 'off',
+            parameterHints: { enabled: false },
+            snippetSuggestions: 'none',
+            inlineSuggest: { enabled: false },
+            hover: { enabled: false },
+            suggest: {
+              showWords: false,
+              showSnippets: false,
+              showKeywords: false,
+              showClasses: false,
+              showFunctions: false,
+              showVariables: false,
+              showMethods: false,
+              showProperties: false,
+            },
           }}
         />
       </div>

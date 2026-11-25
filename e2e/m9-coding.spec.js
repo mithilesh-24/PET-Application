@@ -86,6 +86,14 @@ test('M9 coding screen: offline Monaco, Run Code, Submit full/partial marks, and
     // Verify Monaco loaded purely locally with zero external CDN requests
     expect(externalRequests).toEqual([]);
 
+    // Verify autocomplete / code clues do not appear when typing in Java (e.g. "System.")
+    await page.locator('#coding-lang-select').selectOption('java');
+    await expect(page.locator('.monaco-editor')).toContainText('public class Main');
+    await page.locator('.monaco-editor .view-lines').click();
+    await page.keyboard.type('System.');
+    await page.waitForTimeout(300);
+    await expect(page.locator('.monaco-editor .suggest-widget')).toHaveCount(0);
+
     // Switch to Python and wait for Python starter template to load in Monaco
     await page.locator('#coding-lang-select').selectOption('python');
     await expect(page.locator('.monaco-editor')).toContainText('def solve');

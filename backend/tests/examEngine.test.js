@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../server.js';
 import { openDatabase } from '../database/database.js';
 import { createKeyStore } from '../services/keyStore.js';
@@ -254,7 +254,9 @@ describe('M5 server-authoritative exam engine', () => {
       'Exceeded violation limit'
     );
     expect(terminated.status).toBe('terminated');
-    expect(h.completedAttempts).toContain(h.attemptId);
+    await vi.waitFor(() => {
+      expect(h.completedAttempts).toContain(h.attemptId);
+    });
 
     const ans = await request(h.app)
       .post(`/api/attempts/${h.attemptId}/answer`)
